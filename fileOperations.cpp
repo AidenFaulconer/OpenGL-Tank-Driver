@@ -1,0 +1,594 @@
+//fileoperations.cpp
+
+#define _CRT_SECURE_NO_DEPRECATE 1
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "glut.h"
+#include "fileOperations.h"
+
+char* findFile(char *fname)
+{
+	// Find a file 'fname', searching in current directory and also parent.
+	// This helps beat Visual Studio's irritating habit of putting the
+	// .EXE in a different folder to all the other files.
+	FILE *stream;
+	char *fileFound;
+
+	fileFound = (char *)(calloc(strlen(fname) + 4, sizeof(char)));
+	// First search for './fname'...
+	strcpy(fileFound, "./");
+	strcat(fileFound, fname);
+	if ((stream = fopen(fileFound, "r")) != NULL)
+	{
+		fclose(stream);
+		return fileFound;
+	}
+
+	// If got to here, then 'fname' wasn't found in current directory.
+	// So search for '../fname'...
+	strcpy(fileFound, "../");
+	strcat(fileFound, fname);
+	if ((stream = fopen(fileFound, "r")) != NULL)
+	{
+		fclose(stream);
+		return fileFound;
+	}
+
+	// If got to here, then 'fname' wasn't found at all.
+	printf("findFile: Unable to find file %s\n", fname);
+	fileFound[0] = 0; // return empty string
+	return fileFound;
+}    // End of findFile().
+
+GLuint texHandle[2];
+UCO_BMP bmpData;
+
+int getBMPTexture(char *fname, GLboolean buildMipmaps)
+// Read in a texture from a 24-bit Windows BMP file in 'fname'
+// attach it to a GL texture handle and return this handle,
+// or -1 if read failed.
+{
+	FILE *fp;
+
+	//GLuint texHandle;
+	int success, texWidth, texHeight;
+	printf("Loading texture file %-40s ... ", fname);
+	fp = fopen(fname, "rb");
+	if (fp == NULL)
+	{
+		printf(" [NO SUCH FILE]\n");
+		return -1;
+	}
+	fclose(fp);
+
+	// OK -- if we got to here then we've got a file...
+	glGenTextures(1, texHandle);
+	success = LoadBMP(fname, &bmpData, 0);
+	if (!success)
+	{
+		printf(" [FAILED]\n");
+		return -1;
+	}
+	else
+		printf(" [OK]\n");
+	// OK -- if we got to here then we read the file...
+	texWidth = bmpData.BitmapInfo->bmiHeader.biWidth;
+	texHeight = bmpData.BitmapInfo->bmiHeader.biHeight;
+	printf("  Texture size: %d X %d\n", texWidth, texHeight);
+	glBindTexture(GL_TEXTURE_2D, texHandle[0]);
+	if (buildMipmaps)
+	{
+		gluBuild2DMipmaps(
+			GL_TEXTURE_2D,       // target type of texture
+			GL_RGB,              // format in which GL should store it
+			texWidth, texHeight, // [obvious]
+			GL_BGR_EXT,          // format of data
+			GL_UNSIGNED_BYTE,    // each R,G,B component is a byte
+			bmpData.BitmapBits   // pointer to location of pixel data
+		);
+	}
+	else
+	{
+		glTexImage2D(
+			GL_TEXTURE_2D,       // target type of texture
+			0,                   // mipmap level
+			GL_RGB,              // format in which GL should store texels
+			texWidth, texHeight, // [obvious]
+			0,                   // border width
+			GL_BGR_EXT,          // format of data
+			GL_UNSIGNED_BYTE,    // each R,G,B component is a byte
+			bmpData.BitmapBits   // pointer to pixel data
+		);
+	}
+	// Clean up after ourselves.  Once GL has a copy of the pixel data,
+	// we can trash the original pixel data...
+	free(bmpData.BitmapBits);
+	return (int)texHandle[0];
+}
+
+/**********************************************************************
+ * Windows BMP file functions for OpenGL.
+ *
+ * Written by  Michael Sweet, from the book "The OpenGL SuperBible".
+ * Intended to be cross-platform, but the code was slightly broken on non-Windows
+ * platforms, so small adjustments made by Ian Lisle to fix that.
+ */
+
+int LoadBMP(char *fname, UCO_BMP *b, int transparency)
+{
+	b->BitmapBits = LoadDIBitmap(fname, /* File to load */
+		&b->BitmapInfo);
+	return (b->BitmapBits != NULL); // true if ok
+}
+
+#ifdef WIN32
+/*
+ * 'LoadDIBitmap()' - Load a DIB/BMP file from disk.
+ *
+ * Returns a pointer to the bitmap if successful, NULL otherwise...
+ */
+
+char *                          /* O - Bitmap data */
+LoadDIBitmap(const char *filename, /* I - File to load */
+	BITMAPINFO **info)    /* O - Bitmap information */
+{
+	FILE             *fp;          /* Open file pointer */
+	char          *bits;        /* Bitmap pixel bits */
+	int              bitsize;      /* Size of bitmap */
+	int              infosize;     /* Size of header information */
+	BITMAPFILEHEADER header;       /* File header */
+
+	/* Try opening the file; use "rb" mode to read this *binary* file. */
+	if ((fp = fopen(filename, "rb")) == NULL)
+		return (NULL);
+
+	/* Read the file header and any following bitmap information... */
+	if (fread(&header, sizeof(BITMAPFILEHEADER), 1, fp) < 1)
+	{
+		/* Couldn't read the file header - return NULL... */
+		fclose(fp);
+		return (NULL);
+	}
+
+	//if (header.bfType != 'MB')	/* Check for BM reversed... BF_TYPE */
+	if (header.bfType != BF_TYPE)	/* Check for BM reversed... BF_TYPE */
+	{
+		/* Not a bitmap file - return NULL... */
+		fclose(fp);
+		return (NULL);
+	}
+
+	infosize = header.bfOffBits - sizeof(BITMAPFILEHEADER);
+	if ((*info = (BITMAPINFO *)malloc(infosize)) == NULL)
+	{
+		/* Couldn't allocate memory for bitmap info - return NULL... */
+		fclose(fp);
+		return (NULL);
+	}
+
+	if (fread(*info, 1, infosize, fp) < (size_t)infosize)
+	{
+		/* Couldn't read the bitmap header - return NULL... */
+		free(*info);
+		fclose(fp);
+		return (NULL);
+	}
+
+	/* Now that we have all the header info read in, allocate memory for *
+	 * the bitmap and read *it* in...                                    */
+	if ((bitsize = (*info)->bmiHeader.biSizeImage) == 0)
+		bitsize = ((*info)->bmiHeader.biWidth *
+		(*info)->bmiHeader.biBitCount + 7) / 8 *
+		abs((*info)->bmiHeader.biHeight);
+
+	if ((bits = (char *)malloc(bitsize)) == NULL)
+	{
+		/* Couldn't allocate memory - return NULL! */
+		free(*info);
+		fclose(fp);
+		return (NULL);
+	}
+
+	if (fread(bits, 1, bitsize, fp) < (size_t)bitsize)
+	{
+		/* Couldn't read bitmap - free memory and return NULL! */
+		free(*info);
+		free(bits);
+		fclose(fp);
+		return (NULL);
+	}
+
+	/* OK, everything went fine - return the allocated bitmap... */
+	fclose(fp);
+	return (bits);
+}
+
+/*
+ * 'SaveDIBitmap()' - Save a DIB/BMP file to disk.
+ *
+ * Returns 0 on success or -1 on failure...
+ */
+
+int                                /* O - 0 = success, -1 = failure */
+SaveDIBitmap(const char *filename, /* I - File to load */
+	BITMAPINFO *info,     /* I - Bitmap information */
+	char    *bits)     /* I - Bitmap data */
+{
+	FILE             *fp;          /* Open file pointer */
+	int              size,         /* Size of file */
+		infosize,     /* Size of bitmap info */
+		bitsize;      /* Size of bitmap pixels */
+	BITMAPFILEHEADER header;       /* File header */
+
+	/* Try opening the file; use "wb" mode to write this *binary* file. */
+	if ((fp = fopen(filename, "wb")) == NULL)
+		return (-1);
+
+	/* Figure out the bitmap size */
+	if (info->bmiHeader.biSizeImage == 0)
+		bitsize = (info->bmiHeader.biWidth *
+			info->bmiHeader.biBitCount + 7) / 8 *
+		abs(info->bmiHeader.biHeight);
+	else
+		bitsize = info->bmiHeader.biSizeImage;
+
+	/* Figure out the header size */
+	infosize = sizeof(BITMAPINFOHEADER);
+	switch (info->bmiHeader.biCompression)
+	{
+	case BI_BITFIELDS:
+		infosize += 12; /* Add 3 RGB doubleword masks */
+		if (info->bmiHeader.biClrUsed == 0)
+			break;
+	case BI_RGB:
+		if (info->bmiHeader.biBitCount > 8 &&
+			info->bmiHeader.biClrUsed == 0)
+			break;
+	case BI_RLE8:
+	case BI_RLE4:
+		if (info->bmiHeader.biClrUsed == 0)
+			infosize += (1 << info->bmiHeader.biBitCount) * 4;
+		else
+			infosize += info->bmiHeader.biClrUsed * 4;
+		break;
+	}
+
+	size = sizeof(BITMAPFILEHEADER) + infosize + bitsize;
+
+	/* Write the file header, bitmap information, and bitmap pixel data... */
+	header.bfType = 'MB'; /* Non-portable... sigh */
+	header.bfSize = size;
+	header.bfReserved1 = 0;
+	header.bfReserved2 = 0;
+	header.bfOffBits = sizeof(BITMAPFILEHEADER) + infosize;
+
+	if (fwrite(&header, 1, sizeof(BITMAPFILEHEADER), fp) < sizeof(BITMAPFILEHEADER))
+	{
+		/* Couldn't write the file header - return... */
+		fclose(fp);
+		return (-1);
+	}
+
+	if (fwrite(info, 1, infosize, fp) < (size_t)infosize)
+	{
+		/* Couldn't write the bitmap header - return... */
+		fclose(fp);
+		return (-1);
+	}
+
+	if (fwrite(bits, 1, bitsize, fp) < (size_t)bitsize)
+	{
+		/* Couldn't write the bitmap - return... */
+		fclose(fp);
+		return (-1);
+	}
+
+	/* OK, everything went fine - return... */
+	fclose(fp);
+	return (0);
+}
+
+#else /* !WIN32 */
+/*
+ * Functions for reading and writing 16- and 32-bit little-endian integers.
+ */
+
+static unsigned short read_word(FILE *fp);
+static unsigned int   read_dword(FILE *fp);
+static int            read_long(FILE *fp);
+
+static int            write_word(FILE *fp, unsigned short w);
+static int            write_dword(FILE *fp, unsigned int dw);
+static int            write_long(FILE *fp, int l);
+
+/*
+ * 'LoadDIBitmap()' - Load a DIB/BMP file from disk.
+ *
+ * Returns a pointer to the bitmap if successful, NULL otherwise...
+ */
+
+char *LoadDIBitmap(                /* pointer to byte colour data */
+	const char *filename, /* I - File to load */
+	BITMAPINFO **info)    /* O - Bitmap information */
+{
+	FILE             *fp;          /* Open file pointer */
+	char             *bits;        /* Bitmap pixel bits */
+	char             *ptr;         /* Pointer into bitmap */
+	char             temp;         /* Temporary variable to swap red and blue */
+	int              x, y;         /* X and Y position in image */
+	int              length;       /* Line length */
+	int              bitsize;      /* Size of bitmap */
+	int              infosize;     /* Size of header information */
+	BITMAPFILEHEADER header;       /* File header */
+
+	/* Try opening the file; use "rb" mode to read this *binary* file. */
+	if ((fp = fopen(filename, "rb")) == NULL)
+		return (NULL);
+
+	/* Read the file header and any following bitmap information... */
+	header.bfType = read_word(fp);
+	header.bfSize = read_dword(fp);
+	header.bfReserved1 = read_word(fp);
+	header.bfReserved2 = read_word(fp);
+	header.bfOffBits = read_dword(fp);
+
+	if (header.bfType != BF_TYPE) /* Check for BM reversed... */
+	{
+		/* Not a bitmap file - return NULL... */
+		fclose(fp);
+		return (NULL);
+	}
+
+	infosize = header.bfOffBits - 18;
+	if ((*info = (BITMAPINFO *)malloc(sizeof(BITMAPINFO))) == NULL)
+	{
+		/* Couldn't allocate memory for bitmap info - return NULL... */
+		fclose(fp);
+		return (NULL);
+	}
+
+	(*info)->bmiHeader.biSize = read_dword(fp);
+	(*info)->bmiHeader.biWidth = read_long(fp);
+	(*info)->bmiHeader.biHeight = read_long(fp);
+	(*info)->bmiHeader.biPlanes = read_word(fp);
+	(*info)->bmiHeader.biBitCount = read_word(fp);
+	(*info)->bmiHeader.biCompression = read_dword(fp);
+	(*info)->bmiHeader.biSizeImage = read_dword(fp);
+	(*info)->bmiHeader.biXPelsPerMeter = read_long(fp);
+	(*info)->bmiHeader.biYPelsPerMeter = read_long(fp);
+	(*info)->bmiHeader.biClrUsed = read_dword(fp);
+	(*info)->bmiHeader.biClrImportant = read_dword(fp);
+
+	if (infosize > 40)
+		if (fread((*info)->bmiColors, infosize - 40, 1, fp) < 1)
+		{
+			/* Couldn't read the bitmap header - return NULL... */
+			free(*info);
+			fclose(fp);
+			return (NULL);
+		}
+
+	/* Now that we have all the header info read in, allocate memory for *
+	 * the bitmap and read *it* in...                                    */
+	if ((bitsize = (*info)->bmiHeader.biSizeImage) == 0)
+		bitsize = ((*info)->bmiHeader.biWidth *
+		(*info)->bmiHeader.biBitCount + 7) / 8 *
+		abs((*info)->bmiHeader.biHeight);
+
+	if ((bits = malloc(bitsize)) == NULL)
+	{
+		/* Couldn't allocate memory - return NULL! */
+		free(*info);
+		fclose(fp);
+		return (NULL);
+	}
+
+	if (fread(bits, 1, bitsize, fp) < bitsize)
+	{
+		/* Couldn't read bitmap - free memory and return NULL! */
+		free(*info);
+		free(bits);
+		fclose(fp);
+		return (NULL);
+	}
+
+	/* DON'T SWAP RED & BLUE -- THE WINDOWS VERSION DOESN'T
+	// Swap red and blue
+	length = ((*info)->bmiHeader.biWidth * 3 + 3) & ~3;
+	for (y = 0; y < (*info)->bmiHeader.biHeight; y ++)
+		for (ptr = bits + y * length, x = (*info)->bmiHeader.biWidth;
+			 x > 0;
+		 x --, ptr += 3)
+		{
+		temp   = ptr[0];
+		ptr[0] = ptr[2];
+		ptr[2] = temp;
+		}
+	*/
+
+	/* OK, everything went fine - return the allocated bitmap... */
+	fclose(fp);
+	return (bits);
+}
+
+/*
+ * 'SaveDIBitmap()' - Save a DIB/BMP file to disk.
+ *
+ * Returns 0 on success or -1 on failure...
+ */
+
+int                                /* O - 0 = success, -1 = failure */
+SaveDIBitmap(const char *filename, /* I - File to load */
+	BITMAPINFO *info,     /* I - Bitmap information */
+	char       *bits)     /* I - Bitmap data */
+{
+	FILE *fp;                      /* Open file pointer */
+	int  size,                     /* Size of file */
+		infosize,                 /* Size of bitmap info */
+		bitsize;                  /* Size of bitmap pixels */
+
+   /* Try opening the file; use "wb" mode to write this *binary* file. */
+	if ((fp = fopen(filename, "wb")) == NULL)
+		return (-1);
+
+	/* Figure out the bitmap size */
+	if (info->bmiHeader.biSizeImage == 0)
+		bitsize = (info->bmiHeader.biWidth *
+			info->bmiHeader.biBitCount + 7) / 8 *
+		abs(info->bmiHeader.biHeight);
+	else
+		bitsize = info->bmiHeader.biSizeImage;
+
+	/* Figure out the header size */
+	infosize = sizeof(BITMAPINFOHEADER);
+	switch (info->bmiHeader.biCompression)
+	{
+	case BI_BITFIELDS:
+		infosize += 12; /* Add 3 RGB doubleword masks */
+		if (info->bmiHeader.biClrUsed == 0)
+			break;
+	case BI_RGB:
+		if (info->bmiHeader.biBitCount > 8 &&
+			info->bmiHeader.biClrUsed == 0)
+			break;
+	case BI_RLE8:
+	case BI_RLE4:
+		if (info->bmiHeader.biClrUsed == 0)
+			infosize += (1 << info->bmiHeader.biBitCount) * 4;
+		else
+			infosize += info->bmiHeader.biClrUsed * 4;
+		break;
+	}
+
+	size = sizeof(BITMAPFILEHEADER) + infosize + bitsize;
+
+	/* Write the file header, bitmap information, and bitmap pixel data... */
+	write_word(fp, BF_TYPE);        /* bfType */
+	write_dword(fp, size);          /* bfSize */
+	write_word(fp, 0);              /* bfReserved1 */
+	write_word(fp, 0);              /* bfReserved2 */
+	write_dword(fp, 18 + infosize); /* bfOffBits */
+
+	write_dword(fp, info->bmiHeader.biSize);
+	write_long(fp, info->bmiHeader.biWidth);
+	write_long(fp, info->bmiHeader.biHeight);
+	write_word(fp, info->bmiHeader.biPlanes);
+	write_word(fp, info->bmiHeader.biBitCount);
+	write_dword(fp, info->bmiHeader.biCompression);
+	write_dword(fp, info->bmiHeader.biSizeImage);
+	write_long(fp, info->bmiHeader.biXPelsPerMeter);
+	write_long(fp, info->bmiHeader.biYPelsPerMeter);
+	write_dword(fp, info->bmiHeader.biClrUsed);
+	write_dword(fp, info->bmiHeader.biClrImportant);
+
+	if (infosize > 40)
+		if (fwrite(info->bmiColors, infosize - 40, 1, fp) < 1)
+		{
+			/* Couldn't write the bitmap header - return... */
+			fclose(fp);
+			return (-1);
+		}
+
+	if (fwrite(bits, 1, bitsize, fp) < bitsize)
+	{
+		/* Couldn't write the bitmap - return... */
+		fclose(fp);
+		return (-1);
+	}
+
+	/* OK, everything went fine - return... */
+	fclose(fp);
+	return (0);
+}
+
+/*
+ * 'read_word()' - Read a 16-bit unsigned integer.
+ */
+
+static unsigned short     /* O - 16-bit unsigned integer */
+read_word(FILE *fp)       /* I - File to read from */
+{
+	unsigned char b0, b1; /* Bytes from file */
+
+	b0 = getc(fp);
+	b1 = getc(fp);
+
+	return ((b1 << 8) | b0);
+}
+
+/*
+ * 'read_dword()' - Read a 32-bit unsigned integer.
+ */
+
+static unsigned int               /* O - 32-bit unsigned integer */
+read_dword(FILE *fp)              /* I - File to read from */
+{
+	unsigned char b0, b1, b2, b3; /* Bytes from file */
+
+	b0 = getc(fp);
+	b1 = getc(fp);
+	b2 = getc(fp);
+	b3 = getc(fp);
+
+	return ((((((b3 << 8) | b2) << 8) | b1) << 8) | b0);
+}
+
+/*
+ * 'read_long()' - Read a 32-bit signed integer.
+ */
+
+static int                        /* O - 32-bit signed integer */
+read_long(FILE *fp)               /* I - File to read from */
+{
+	unsigned char b0, b1, b2, b3; /* Bytes from file */
+
+	b0 = getc(fp);
+	b1 = getc(fp);
+	b2 = getc(fp);
+	b3 = getc(fp);
+
+	return ((int)(((((b3 << 8) | b2) << 8) | b1) << 8) | b0);
+}
+
+/*
+ * 'write_word()' - Write a 16-bit unsigned integer.
+ */
+
+static int                     /* O - 0 on success, -1 on error */
+write_word(FILE           *fp, /* I - File to write to */
+	unsigned short w)   /* I - Integer to write */
+{
+	putc(w, fp);
+	return (putc(w >> 8, fp));
+}
+
+/*
+ * 'write_dword()' - Write a 32-bit unsigned integer.
+ */
+
+static int                    /* O - 0 on success, -1 on error */
+write_dword(FILE         *fp, /* I - File to write to */
+	unsigned int dw)  /* I - Integer to write */
+{
+	putc(dw, fp);
+	putc(dw >> 8, fp);
+	putc(dw >> 16, fp);
+	return (putc(dw >> 24, fp));
+}
+
+/*
+ * 'write_long()' - Write a 32-bit signed integer.
+ */
+
+static int           /* O - 0 on success, -1 on error */
+write_long(FILE *fp, /* I - File to write to */
+	int  l)   /* I - Integer to write */
+{
+	putc(l, fp);
+	putc(l >> 8, fp);
+	putc(l >> 16, fp);
+	return (putc(l >> 24, fp));
+}
+#endif /* WIN32 */
