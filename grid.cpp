@@ -122,11 +122,16 @@ int Grid::render()
 	for (int x = 0; x < xsteps; x++)
 		for (int z = 0; z < zsteps; z++)
 		{
-			glNormal3f(x, 0, z); // yes veronica all normals point up
+			glNormal3fv(polygonNormal(vec3(xdelta*x, 0, zdelta*z), vec3(xdelta*x + xdelta, 0, zdelta*z), vec3(xdelta*x + xdelta, 0, zdelta*z + zdelta), vec3(xdelta*x, 0, zdelta*z + zdelta)).fv());
 			glVertex3f(xdelta*x, 0, zdelta*z);
+
 			glVertex3f(xdelta*x + xdelta, 0, zdelta*z);
+
 			glVertex3f(xdelta*x + xdelta, 0, zdelta*z + zdelta);
+
 			glVertex3f(xdelta*x, 0, zdelta*z + zdelta);
+
+
 		}
 	glEnd();
 	glPopMatrix();

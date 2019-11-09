@@ -46,6 +46,13 @@ inline void displayNormal(const vec3& v1, const vec3& normalz)
 
 	glEnd();
 }
+inline void renderNormal(const vec3& v1, const vec3& normalz)
+{
+	vec3 original = v1;
+	vec3 translated = v1;
+	translated = v1 + 1;
+	glNormal3f(translated[0], translated[1], translated[2]);
+}
 
 //for triangles
 inline void displayNormal3(const vec3& v1, const  vec3& v2, const  vec3& v3, const vec3& normalz)
@@ -56,6 +63,16 @@ inline void displayNormal3(const vec3& v1, const  vec3& v2, const  vec3& v3, con
 	avg.y = (v1[1] + v2[1] + v3[1]) / 3;
 	avg.z = (v1[2] + v2[2] + v3[2]) / 3;
 	displayNormal(avg, normalz);
+}
+
+inline void renderNormal3(const vec3& v1, const  vec3& v2, const  vec3& v3, const vec3& normalz)
+{
+	// displays the normal of a triangle
+	vec3 avg;
+	avg.x = (v1[0] + v2[0] + v3[0]) / 3;
+	avg.y = (v1[1] + v2[1] + v3[1]) / 3;
+	avg.z = (v1[2] + v2[2] + v3[2]) / 3;
+	renderNormal(avg, normalz);
 }
 
 //for quads
