@@ -212,7 +212,6 @@ int Mesh::render()
 void Mesh::drawPolygons()
 {
 	// Draw a polygon mesh object.
-
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glVertexPointer(3, GL_FLOAT, 0, vertices);
 	if (vertexNormals != NULL)

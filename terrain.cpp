@@ -89,14 +89,14 @@ int terrain::render()
 	for (int x = 0; x < xsteps - 1; x++)
 		for (int z = 0; z < zsteps - 1; z++)
 		{
-			glNormal3f(x, map[x][z], z); // yes veronica all normals point up (which is wrong) (students need to fix this)
-
 			//set points for this triangle
 			glBegin(GL_TRIANGLES);
+			glNormal3fv(polygonNormal(vec3(xdelta*x, map[x][z], zdelta*z), vec3(xdelta*x + xdelta, map[x + 1][z], zdelta*z), vec3(xdelta*x, map[x][z + 1], zdelta*z + zdelta)).fv());
 			setMaterialHeight(map[x][z]);
 
 			//thisTex->setVertex(z, xdelta*x, map[x][z], zdelta*z);
 			glVertex3f(xdelta*x, map[x][z], zdelta*z);
+
 			setMaterialHeight(map[x + 1][z]);
 
 			//thisTex->setVertex(z, xdelta*x, map[x][z], zdelta*z);
@@ -105,10 +105,12 @@ int terrain::render()
 
 			//thisTex->setVertex(z, xdelta*x, map[x][z], zdelta*z);
 			glVertex3f(xdelta*x, map[x][z + 1], zdelta*z + zdelta);
+
 			glEnd();
 
 			//set face for this triangle
 			glBegin(GL_TRIANGLES);
+			glNormal3fv(polygonNormal(vec3(xdelta*x + xdelta, map[x + 1][z + 1], zdelta*z + zdelta), vec3(xdelta*x, map[x][z + 1], zdelta*z + zdelta), vec3(xdelta*x + xdelta, map[x + 1][z], zdelta*z)).fv());
 			setMaterialHeight(map[x + 1][z + 1]);
 
 			//thisTex->setVertex(z, xdelta*x, map[x][z], zdelta*z);
@@ -121,6 +123,7 @@ int terrain::render()
 
 			//thisTex->setVertex(z, xdelta*x, map[x][z], zdelta*z);
 			glVertex3f(xdelta*x + xdelta, map[x + 1][z], zdelta*z);
+
 			glEnd();
 		}
 
@@ -165,7 +168,6 @@ int terrain::renderLines()
 			);
 		}
 
-
 	glBegin(GL_TRIANGLES);
 	for (int x = 0; x < xsteps - 1; x++)
 		for (int z = 0; z < zsteps - 1; z++)
@@ -183,8 +185,6 @@ int terrain::renderLines()
 
 	glEnd();
 
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glPopMatrix();
 
 	return true;
@@ -251,6 +251,7 @@ terrain::terrain(char* fileName, int width, int height)
 	mapWidth = width;
 	mapHeight = height;
 
+	setUp(mapWidth, mapHeight, mapWidth, mapHeight);
 	readHeightField(findFile(fileName), &mapWidth, &mapHeight, mapInt);
 	for (int x = 0; x < mapWidth; x++)
 	{
@@ -260,7 +261,6 @@ terrain::terrain(char* fileName, int width, int height)
 		}
 	}
 
-	setUp(mapWidth, mapHeight, mapWidth, mapHeight);
 
 	highHeight = 2.8;
 	grassHeight = 0.5;

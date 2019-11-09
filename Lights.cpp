@@ -289,11 +289,11 @@ void MaterialClass::setMaterialWhiteStuff2()
 void MaterialClass::setMaterialYellowSand()
 {
 	setAmbient(0.4f, 0.4f, 0.1575f, 1);
-	setDiffuse(0.7f, 0.7f, 0.2f, 1);
-	setSpecular(1.2, 1.2, 1.0, 1);
+	setDiffuse(0.7f, 0.7f, 0.4f, 1);
+	setSpecular(.3, .3, .3, 1);
 	//setSpecular(0.597f, 0.597f, 0.597f, 1); // shinier than whitestuff
 	setEmissive(0, 0, 0, 0);
-	setShinyInt(2/*(int)(0.108*128.0)*/);
+	setShinyInt((int)(0.108*128.0));
 }
 
 void MaterialClass::setMaterialGreenGrass()

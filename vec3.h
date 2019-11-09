@@ -2,6 +2,7 @@
 #define VEC3_H
 #include <cmath>
 #include <iostream>
+#include "glut.h"
 using namespace std;
 
 /* ======  Declaration of vec3 class ==============================*/
@@ -11,33 +12,33 @@ struct vec3
 
 public:
 	// Data.  Warning! these are public!!
-	float x;
-	float y;
-	float z;
+	GLfloat x;
+	GLfloat y;
+	GLfloat z;
 
 	/* ----- Constructors & destructors... -----------------*/
 	vec3();	// 0-argument constructor makes a zero-vector.
-	vec3(const float a); // 1-argument constructor makes vector [a,a,a]
-	vec3(const float xval, const float yval, const float zval); // 3-argument constructor copies x,y,z values into a vec3...
-	vec3(float const *pf); // 1-arg constructor transcribes data from an array of floats
+	vec3(const GLfloat a); // 1-argument constructor makes vector [a,a,a]
+	vec3(const GLfloat xval, const GLfloat yval, const GLfloat zval); // 3-argument constructor copies x,y,z values into a vec3...
+	vec3(GLfloat const *pf); // 1-arg constructor transcribes data from an array of GLfloats
 	// No copy constructor: default is okay.
 	// No destructor: default is okay.
 
 	// No set and get methods, since data are public.
-	inline float* fv(); // Method to return a ptr-to-float.
+	inline GLfloat* fv(); // Method to return a ptr-to-GLfloat.
 
 	/* ------ Other methods... ----------------------- */
 	vec3 setZero();
-	vec3 setValue(float xx, float yy, float zz);
+	vec3 setValue(GLfloat xx, GLfloat yy, GLfloat zz);
 
 	// Overload C++ operators for some basic arithmetic...
-	float operator[](const int k) const;
+	GLfloat operator[](const int k) const;
 	vec3 operator+=(const vec3& v);
-	vec3 operator+=(const float a);
+	vec3 operator+=(const GLfloat a);
 	vec3 operator-=(const vec3& v);
-	vec3 operator-=(const float a);
-	vec3 operator*=(const float a);
-	vec3 operator/=(const float a);
+	vec3 operator-=(const GLfloat a);
+	vec3 operator*=(const GLfloat a);
+	vec3 operator/=(const GLfloat a);
 };  // End of vec3 class
 
 // =========== Top-level function declarations =============
@@ -48,19 +49,19 @@ bool operator!=(const vec3& u, const vec3& v);
 inline vec3 operator-(const vec3& u);
 inline vec3 operator+(const vec3& u, const vec3& v);
 inline vec3 operator-(const vec3& u, const vec3& v);
-inline vec3 operator*(const float a, const vec3& u);
-inline vec3 operator*(const vec3& u, const float a);
-inline vec3 operator/(const vec3& u, const float a);
+inline vec3 operator*(const GLfloat a, const vec3& u);
+inline vec3 operator*(const vec3& u, const GLfloat a);
+inline vec3 operator/(const vec3& u, const GLfloat a);
 
 // -------- Other functions using vec3 ------------------------
-inline float length(const vec3 &u);
+inline GLfloat length(const vec3 &u);
 inline vec3 normalize(const vec3& u);
 inline vec3& normalize(vec3& w, vec3 &u);
 
-inline float dist(const vec3& u, const vec3& v);
-inline vec3 mix(const vec3& u, const vec3& v, const float t);
-inline vec3&  mix(vec3& w, vec3& u, vec3& v, const float t);
-inline float  dot(const vec3& u, const vec3& v);
+inline GLfloat dist(const vec3& u, const vec3& v);
+inline vec3 mix(const vec3& u, const vec3& v, const GLfloat t);
+inline vec3&  mix(vec3& w, vec3& u, vec3& v, const GLfloat t);
+inline GLfloat  dot(const vec3& u, const vec3& v);
 inline vec3 cross(const vec3& u, const vec3& v);
 inline vec3& cross(vec3& w, vec3& u, vec3& v);
 
@@ -70,8 +71,7 @@ inline vec3& polygonNormal(vec3& n, const vec3& P, const vec3& Q, const vec3& R)
 inline vec3& negate(vec3& w, vec3& u);
 inline vec3& add(vec3& w, vec3& u, vec3& v);
 inline vec3& subtract(vec3& w, vec3& u, vec3& v);
-inline vec3& scalarMult(vec3 &w, float a, vec3& u);
-
+inline vec3& scalarMult(vec3 &w, GLfloat a, vec3& u);
 /* =========== Methods for vec3 struct ======================= */
 // 0-argument constructor makes vector [0,0,0]...
 inline vec3::vec3() : x(0.0f), y(0.0f), z(0.0f)
@@ -79,31 +79,31 @@ inline vec3::vec3() : x(0.0f), y(0.0f), z(0.0f)
 }
 
 // 1-argument constructor makes vector [a,a,a]...
-inline vec3::vec3(const float a) : x(a), y(a), z(a)
+inline vec3::vec3(const GLfloat a) : x(a), y(a), z(a)
 {
 }
 
 // 3-argument constructor copies x,y,z values into a vec3...
-inline vec3::vec3(const float xval, const float yval, const float zval) : x(xval), y(yval), z(zval)
+inline vec3::vec3(const GLfloat xval, const GLfloat yval, const GLfloat zval) : x(xval), y(yval), z(zval)
 {
 }
 
-// 1-argument constructor -- accepts ptr-to-float
+// 1-argument constructor -- accepts ptr-to-GLfloat
 // and copies array components to a vec3
-inline vec3::vec3(float const *pf) : x(pf[0]), y(pf[1]), z(pf[2])
+inline vec3::vec3(GLfloat const *pf) : x(pf[0]), y(pf[1]), z(pf[2])
 {
 }
 
-// This dangerous method provides a pointer-to-float that can be passed
+// This dangerous method provides a pointer-to-GLfloat that can be passed
 // when OpenGL expects an array of 3 elements.
 // E.g. if "vec3 u = vec3(0.7, 0.2, 0.2);"
 // then it is valid to call   "glColor3fv(u.fv());"
 // "Dangerous" because a pointer to an object is escaping.
 // If you delete the underlying vec3 or it goes out of scope,
 // then you know what you're in for if you follow this dangling pointer.
-inline float* vec3::fv()
+inline GLfloat* vec3::fv()
 {
-	return (float*)this;
+	return (GLfloat*)this;
 }
 
 // Method to set a vector to [0,0,0]...
@@ -116,7 +116,7 @@ inline vec3 vec3::setZero()
 }
 
 // Method to set a vector to [xx,yy,zz]...
-inline vec3 vec3::setValue(float xx, float yy, float zz)
+inline vec3 vec3::setValue(GLfloat xx, GLfloat yy, GLfloat zz)
 {
 	x = xx;
 	y = yy;
@@ -125,9 +125,9 @@ inline vec3 vec3::setValue(float xx, float yy, float zz)
 }
 
 // C++ operators...
-inline float vec3::operator[](const int k) const
+inline GLfloat vec3::operator[](const int k) const
 {
-	return ((float*)this)[k];
+	return ((GLfloat*)this)[k];
 }
 
 inline vec3 vec3::operator+=(const vec3& v)
@@ -138,7 +138,7 @@ inline vec3 vec3::operator+=(const vec3& v)
 	return *this;
 }
 
-inline vec3 vec3::operator+=(const float a)
+inline vec3 vec3::operator+=(const GLfloat a)
 {
 	x += a;
 	y += a;
@@ -154,7 +154,7 @@ inline vec3 vec3::operator-=(const vec3& v)
 	return *this;
 }
 
-inline vec3 vec3::operator-=(const float a)
+inline vec3 vec3::operator-=(const GLfloat a)
 {
 	x -= a;
 	y -= a;
@@ -162,7 +162,7 @@ inline vec3 vec3::operator-=(const float a)
 	return *this;
 }
 
-inline vec3 vec3::operator*=(const float a)
+inline vec3 vec3::operator*=(const GLfloat a)
 {
 	x *= a;
 	y *= a;
@@ -170,9 +170,9 @@ inline vec3 vec3::operator*=(const float a)
 	return *this;
 }
 
-inline vec3 vec3::operator/=(const float a)
+inline vec3 vec3::operator/=(const GLfloat a)
 {
-	float invA = 1.0f / a;
+	GLfloat invA = 1.0f / a;
 	x *= invA;
 	y *= invA;
 	z *= invA;
@@ -193,14 +193,14 @@ inline ostream& operator<<(ostream& os, const vec3& v)
 }
 
 // Comparison...
-// Beware! (Floating point comparisons)
+// Beware! (GLfloating point comparisons)
 inline bool operator==(const vec3& u, const vec3& v)
 {
 	return (u.x == v.x && u.y == v.y && u.z == v.z);
 }
 
 // Comparison...
-// Beware! (Floating point comparisons)
+// Beware! (GLfloating point comparisons)
 inline bool operator!=(const vec3& u, const vec3& v)
 {
 	return (u.x != v.x || u.y != v.y || u.z != v.z);
@@ -229,30 +229,30 @@ inline vec3 operator-(const vec3& u, const vec3& v)
 
 // Scalar mult a*u.
 // Warning: vec3 '*' allocates memory!  Use 'scalarMult' if this matters.
-inline vec3 operator*(const float a, const vec3& u)
+inline vec3 operator*(const GLfloat a, const vec3& u)
 {
 	return vec3(a * u.x, a * u.y, a * u.z);
 }
 
 // Scalar mult u*a.
 // Warning: vec3 '*' allocates memory!  Use 'scalarMult' if this matters.
-inline vec3 operator*(const vec3& u, const float a)
+inline vec3 operator*(const vec3& u, const GLfloat a)
 {
 	return vec3(a * u.x, a * u.y, a * u.z);
 }
 
 // Scalar 'division' u/a, which is really u * (1/a).
 // Warning: vec3 '*' allocates memory!  Use 'scalarMult' if this matters.
-inline vec3 operator/(const vec3& u, const float a)
+inline vec3 operator/(const vec3& u, const GLfloat a)
 {
-	float invA = 1.0f / a;
+	GLfloat invA = 1.0f / a;
 	return vec3(invA * u.x, invA * u.y, invA * u.z);
 }
 
 // -------- Other functions using vec3 ------------------------
 
 // Euclidean length of vector...
-inline float length(const vec3 &u)
+inline GLfloat length(const vec3 &u)
 {
 	// This is not overflow-safe, nor is it underflow-safe
 	// So don't let x,y,z get too big, or too small.
@@ -263,7 +263,7 @@ inline float length(const vec3 &u)
 // Warning!  allocates memory
 inline vec3 normalize(const vec3& u)
 {
-	float len, invLength;
+	GLfloat len, invLength;
 	len = length(u);
 	if (len == 0.0)  // Can't normalize a 0-vector, but don't throw an exception.
 		return vec3(0.0f, 0.0f, 0.0f);
@@ -274,7 +274,7 @@ inline vec3 normalize(const vec3& u)
 // Two-argument form, no memory allocated...
 inline vec3& normalize(vec3& w, vec3 &u)
 {
-	float len, invLength;
+	GLfloat len, invLength;
 	len = length(u);
 	if (len == 0.0)  // Can't normalize a 0-vector, but don't throw an exception.
 	{
@@ -293,9 +293,9 @@ inline vec3& normalize(vec3& w, vec3 &u)
 
 // Euclidean distance between points
 // This should be called distance, but that fights with some C++ iterator function?
-inline float dist(const vec3& u, const vec3& v)
+inline GLfloat dist(const vec3& u, const vec3& v)
 {
-	float deltax = v.x - u.x,
+	GLfloat deltax = v.x - u.x,
 		deltay = v.y - u.y,
 		deltaz = v.z - u.z;
 	return sqrt(deltax * deltax + deltay * deltay + deltaz * deltaz);
@@ -303,13 +303,13 @@ inline float dist(const vec3& u, const vec3& v)
 
 // Linear blend or mix of vectors.
 // Warning!  Allocates memory!  Use 4-argument form if this matters.
-inline vec3 mix(const vec3& u, const vec3& v, const float t)  // Linear blend of u,v
+inline vec3 mix(const vec3& u, const vec3& v, const GLfloat t)  // Linear blend of u,v
 {
 	return t * u + (1 - t)*v;
 }
 
 // Linear blend or mix of vectors.  Effectively w = t*u + (1-t)*v
-inline vec3&  mix(vec3& w, vec3& u, vec3& v, const float t)  // Linear blend of u,v
+inline vec3&  mix(vec3& w, vec3& u, vec3& v, const GLfloat t)  // Linear blend of u,v
 {
 	w.x = t * u.x + (1 - t)*v.x;
 	w.y = t * u.y + (1 - t)*v.y;
@@ -317,7 +317,7 @@ inline vec3&  mix(vec3& w, vec3& u, vec3& v, const float t)  // Linear blend of 
 	return w;
 }
 
-inline float  dot(const vec3& u, const vec3& v) // Dot product of two vectors. will be zero if vectors are orthogonal
+inline GLfloat  dot(const vec3& u, const vec3& v) // Dot product of two vectors. will be zero if vectors are orthogonal
 {
 	return u.x * v.x + u.y * v.y + u.z * v.z;
 }
@@ -332,7 +332,7 @@ inline vec3& cross(vec3& w, vec3& u, vec3& v)
 {
 	// This code is carefully written to work for calls like cross (u,u,v)
 	// Why not just use the other version?
-	float tmpx, tmpy, tmpz;
+	GLfloat tmpx, tmpy, tmpz;
 	tmpx = u.y * v.z - u.z * v.y;
 	tmpy = u.z * v.x - u.x * v.z;
 	tmpz = u.x * v.y - u.y * v.x;
@@ -343,7 +343,7 @@ inline vec3& cross(vec3& w, vec3& u, vec3& v)
 }
 
 //find angle between two vectors
-inline float findAngle(const vec3& v1, const vec3& v2)
+inline GLfloat findAngle(const vec3& v1, const vec3& v2)
 {
 	// You might leave these Unitize calls out if you know
 	// you're always passing in Unitized vectors. However
@@ -362,8 +362,8 @@ inline float findAngle(const vec3& v1, const vec3& v2)
 	//v2Copy.Unitize();
 
 	//dotProduct / magProduct is cos theta... arc cos of theta is the angle
-	const float dotProduct = fabsf(dot(v1, v2));
-	const float magProduct = length(v1) * length(v2);// |a|*|b|
+	const GLfloat dotProduct = fabsf(dot(v1, v2));
+	const GLfloat magProduct = length(v1) * length(v2);// |a|*|b|
 
 	cout << "mag product" << magProduct << endl;
 	cout << "dot product " << dotProduct << endl;
@@ -423,7 +423,7 @@ inline vec3& subtract(vec3& w, vec3& u, vec3& v) // Can't declare const e.g. wha
 }
 
 // Scalar mult that doesn't allocate memory...
-inline vec3& scalarMult(vec3 &w, float a, vec3& u) // Can't declare const e.g. what if scalarMult(u,a,u)?
+inline vec3& scalarMult(vec3 &w, GLfloat a, vec3& u) // Can't declare const e.g. what if scalarMult(u,a,u)?
 {
 	// Effectively v = a * u
 	w.x = a * u.x;
